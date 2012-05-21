@@ -109,7 +109,9 @@ var readType = function(dataView, idx, t, struct) {
           if (length == '*') {
             v = [];
             var obj = null;
-            while (obj = readType(dataView, idx, ta, struct)) {
+            while (idx[0] < dataView.byteLength) {
+              obj = readType(dataView, idx, ta, struct);
+              if (!obj) break;
               v.push(obj);
             }
             return v;

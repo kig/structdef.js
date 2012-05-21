@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <script src="structdef.js"></script>
+  </head>
+  <body>
+    <h1>Shapefile reader</h1>
+    <h3>Select a SHP file</h3>
+    <input type="file"><br>
+    <pre></pre>
+    <script>
+document.querySelector('input[type="file"]').onchange = function(e) {
+  var reader = new FileReader();
+
+  var recordDef = {
+    number: 'int32',
+    length: 'int32',
+    shape: ['uint16', 'length']
+  };
+
+  var shpDef = {
+    fileCode: 'int32=0x0000270a',
+    unused: ['int32', 5],
+    wordLength: 'int32',
+    version: 'int32le',
+    shapeType: 'int32le',
+    minX: 'float64le', 
+    minY: 'float64le', 
+    maxX: 'float64le', 
+    maxY: 'float64le', 
+    minZ: 'float64le', 
+    maxZ: 'float64le', 
+    minM: 'float64le', 
+    maxM: 'float64le',
+    records: [recordDef, '*']
+  };
+
+  reader.onload = function(e) {
+    var dv = new DataView(this.result);
+DV =dv;
+    var idx = [0];
+    pre = document.querySelector('pre');
+    try {
+    var obj = readStruct(dv, idx, shpDef);
+ } catch(e) {}
+    if (obj) { 
+      for (var i=0; i<obj.records.length; i++) {
+        obj.records[i].shape = "uint8["+obj.records[i].shape.length+"]";
+      }
+      pre.textContent = JSON.stringify(obj, null, 4);
+    } else {
+      pre.textContent = "Failed to parse SHP at "+idx[0]+" :(";
+    }
+  };
+
+  reader.readAsArrayBuffer(this.files[0]);
+};
+
+    </script>
+  </body>
+</html>
