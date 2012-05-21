@@ -59,12 +59,19 @@ var readStruct = function(dataView, idx, structDefinition) {
   return struct;
 };
 
+var eqCmp = function(a, b) { return a == b; };
+var neqCmp = function(a, b) { return a != b; };
+
 var readType = function(dataView, idx, t, struct) {
-  var v, paddedTo = 0, le = false, tr, ref;
+  var v, paddedTo = 0, le = false, tr, ref, cmp = eqCmp;
   if (typeof t == 'string' && t.indexOf("=") > -1) {
     tr = t.split("=");
     t = tr[0];
     ref = tr[1];
+    if (t.charAt(t.length-1) == '!') {
+      t = t.slice(0,-1);
+      cmp = neqCmp;
+    }
   }
   if (typeof t == 'string' && t.indexOf(":") > -1) {
     var tp = t.split(":");
@@ -79,43 +86,43 @@ var readType = function(dataView, idx, t, struct) {
 
     case 'uint8':
       v = dataView.getUint8(idx[0], le);
+      if (ref != null && !cmp(parseInt(ref), v)) return null;
       idx[0] += Math.max(1, paddedTo);
-      if (ref != null && parseInt(ref) != v) return null;
       return v;
     case 'int8':
       v = dataView.getInt8(idx[0], le);
+      if (ref != null && !cmp(parseInt(ref), v)) return null;
       idx[0] += Math.max(1, paddedTo);
-      if (ref != null && parseInt(ref) != v) return null;
       return v;
     case 'uint16':
       v = dataView.getUint16(idx[0], le);
+      if (ref != null && !cmp(parseInt(ref), v)) return null;
       idx[0] += Math.max(2, paddedTo);
-      if (ref != null && parseInt(ref) != v) return null;
       return v;
     case 'int16':
       v = dataView.getInt16(idx[0], le);
+      if (ref != null && !cmp(parseInt(ref), v)) return null;
       idx[0] += Math.max(2, paddedTo);
-      if (ref != null && parseInt(ref) != v) return null;
       return v;
     case 'uint32':
       v = dataView.getUint32(idx[0], le);
+      if (ref != null && !cmp(parseInt(ref), v)) return null;
       idx[0] += Math.max(4, paddedTo);
-      if (ref != null && parseInt(ref) != v) return null;
       return v;
     case 'int32':
       v = dataView.getInt32(idx[0], le);
+      if (ref != null && !cmp(parseInt(ref), v)) return null;
       idx[0] += Math.max(4, paddedTo);
-      if (ref != null && parseInt(ref) != v) return null;
       return v;
     case 'float32':
       v = dataView.getFloat32(idx[0], le);
+      if (ref != null && !cmp(parseFloat(ref), v)) return null;
       idx[0] += Math.max(4, paddedTo);
-      if (ref != null && parseFloat(ref) != v) return null;
       return v;
     case 'float64':
       v = dataView.getFloat64(idx[0], le);
+      if (ref != null && !cmp(parseFloat(ref), v)) return null;
       idx[0] += Math.max(8, paddedTo);
-      if (ref != null && parseFloat(ref) != v) return null;
       return v;
 
     case 'cstring':    
@@ -135,8 +142,8 @@ var readType = function(dataView, idx, t, struct) {
           v += String.fromCharCode(c);
         }
       }
+      if (ref != null && !cmp(ref, v)) return null;
       idx[0] += Math.max(i, paddedTo);
-      if (ref != null && ref != v) return null;
       return v;
 
     default:
@@ -144,7 +151,43 @@ var readType = function(dataView, idx, t, struct) {
         var ta = t[0];
         var length = t[1];
         if (typeof length == 'string') {
-          length = struct[length];
+          if (length == '*') {
+            v = [];
+            var obj = null;
+            while (obj = readType(dataView, idx, ta, struct)) {
+              v.push(obj);
+            }
+            return v;
+          } else if (/[\*\-\+\/]/.test(length)) {
+            var segs = length.replace(/\s+/g,'').split(/(?=[\*\-\+\/])/);
+            var sum = 0;
+            for (var j=0; j<segs.length; j++) {
+              var seg = segs[j];
+              var cmd = seg.charAt(0);
+              if (/[\*\-\+\/]/.test(cmd)) {
+                seg = seg.substring(1);
+              } else {
+                cmd = "+";
+              }
+              if (/^\d+$/.test(seg)) {
+                seg = parseInt(seg);
+              } else {
+                seg = struct[seg];
+              }
+              switch(cmd) {
+                case "+": sum += seg; break;
+                case "-": sum -= seg; break;
+                case "/": sum /= seg; break;
+                case "*": sum *= seg; break;
+                default: sum = seg;
+              }
+            }
+            length = sum;
+          } else {
+            length = struct[length];
+          }
+        } else if (length < 0) {
+          length = dataView.byteLength - idx[0] + length;
         }
         v = new Array(length);
         for (var i=0; i<length; i++) {

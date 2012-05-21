@@ -1,0 +1,54 @@
+<html>
+  <head>
+    <script src="structdef.js"></script>
+  </head>
+  <body>
+    <h1>JPEG marker reader</h1>
+    <h3>Select a JPEG file</h3>
+    <input type="file"><br>
+    <pre></pre>
+    <script>
+document.querySelector('input[type="file"]').onchange = function(e) {
+  var reader = new FileReader();
+
+  var jpegMarkerDef = {
+    tag: 'uint16!=0xFFDA',
+    length: 'uint16',
+    data: ['uint8', 'length-2']
+  };
+
+  var jpegImageStream = {
+    tag: 'uint16=0xFFDA',
+    data: ['uint8', -2]
+  };
+
+  var jpegDef = {
+    start: 'uint16=0xFFD8',
+    markers: [jpegMarkerDef, '*'],
+    image: jpegImageStream,
+    end: 'uint16=0xFFD9'
+  };
+
+  reader.onload = function(e) {
+    var dv = new DataView(this.result);
+
+    var idx = [0];
+    pre = document.querySelector('pre');
+    var obj = readStruct(dv, idx, jpegDef);
+    if (obj) { 
+      for (var i=0; i<obj.markers.length; i++) {
+        obj.markers[i].data = "uint8["+obj.markers[i].data.length+"]";
+      }
+      obj.image.data = "uint8["+obj.image.data.length+"]";
+      pre.textContent = JSON.stringify(obj, null, 4);
+    } else {
+      pre.textContent = "Failed to parse JPEG at "+idx[0]+" :(";
+    }
+  };
+
+  reader.readAsArrayBuffer(this.files[0]);
+};
+
+    </script>
+  </body>
+</html>
