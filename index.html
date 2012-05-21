@@ -29,7 +29,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     if (obj) {
       document.querySelector('pre').textContent = JSON.stringify(obj, null, 4);
     } else {
-      console.log('no ID3v1 data found');
+      document.querySelector('pre').textContent = 'no ID3v1 data found :(';
     }
   };
 
