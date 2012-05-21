@@ -36,12 +36,9 @@ document.querySelector('input[type="file"]').onchange = function(e) {
 
   reader.onload = function(e) {
     var dv = new DataView(this.result);
-DV =dv;
     var idx = [0];
     pre = document.querySelector('pre');
-    try {
     var obj = readStruct(dv, idx, shpDef);
- } catch(e) {}
     if (obj) { 
       for (var i=0; i<obj.records.length; i++) {
         obj.records[i].shape = "uint8["+obj.records[i].shape.length+"]";
