@@ -1,0 +1,47 @@
+<html>
+  <head>
+    <style>
+      h1 {
+        font-size: 120px;
+        font-family: sans-serif;
+      }
+    </style>
+    <script src="structdef.js"></script>
+  </head>
+  <body>
+    <H1>ID3v1 tag reader, based on <a href="http://ericbidelman.tumblr.com/post/8343485440/reading-mp3-id3-tags-in-javascript">Eric Bidelman's code</a></h1>
+    <h3>Select an MP3 file</h3>
+    <input type="file"><br>
+    <pre id="id3"></pre>
+    <script>
+document.querySelector('input[type="file"]').onchange = function(e) {
+  var reader = new FileReader();
+
+  var id3Def = {
+    tag: 'cstring:3=TAG',
+    title: 'cstring:30',
+    artist: 'cstring:30',
+    album: 'cstring:30',
+    year: 'cstring:4'
+  };
+
+  reader.onload = function(e) {
+    var dv = new DataView(this.result);
+
+    // "TAG" starts at byte -128 from EOF.
+    // See http://en.wikipedia.org/wiki/ID3
+
+    var obj = readStruct(new DataView(this.result), [dv.byteLength - 128], id3Def);
+    if (obj) {
+      document.querySelector('pre').textContent = JSON.stringify(obj, null, 4);
+    } else {
+      console.log('no ID3v1 data found');
+    }
+  };
+
+  reader.readAsArrayBuffer(this.files[0]);
+};
+
+    </script>
+  </body>
+</html>
