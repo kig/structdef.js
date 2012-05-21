@@ -1,0 +1,49 @@
+structdef.js
+------------
+
+Read structs of data from ArrayBuffers.
+
+
+Example: Read the ID3v1 tag from an ArrayBuffer.
+(After http://ericbidelman.tumblr.com/post/8343485440/reading-mp3-id3-tags-in-javascript )
+
+// Define the structure of your data.
+var id3v1Def = {
+  tag: 'cstring:3=TAG', // null-terminated string 3 bytes in size
+                        // =TAG requires the string to be TAG to continue parsing
+  title: 'cstring:30',
+  artist: 'cstring:30',
+  album: 'cstring:30',
+  year: 'cstring:4'
+};
+
+var dv = new DataView(data);
+
+// "TAG" starts at byte -128 from EOF.
+// See http://en.wikipedia.org/wiki/ID3
+var obj = readStruct(dv, [dv.byteLength - 128], id3v1Def);
+
+if (obj) {
+    console.log(obj);
+} else {
+    console.log('no ID3v1 data found');
+}
+
+
+
+More complicated spec:
+
+var coordDef = ['float32le', 2]; // Array of two little-endian float32s
+var messageDef = {
+    id: 'uint32le', // Little-endian uint32
+    color: 'uint32le', // Little-endian uint32
+    message: 'cstring:16' // Null-terminated string 16 bytes in size
+};
+var def = {
+    tag: 'cstring:4=\x89QAD', // Required \x89QAD tag
+    code: 'uint32le', // Little-endian uint32
+    length: 'uint16:8', // Big-endian uint16 padded to 8 bytes
+    coords: [coordDef, 'length'], // Array with length 'length', as on the line above
+    messages: [messageDef, 'length'] // Array of structs
+};
+
