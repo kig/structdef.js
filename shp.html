@@ -14,7 +14,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
   var recordDef = {
     number: 'int32',
     length: 'int32',
-    shape: ['uint16', 'length']
+    shape: ['uint8', 'length*2']
   };
 
   var shpDef = {
