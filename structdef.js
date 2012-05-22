@@ -143,11 +143,19 @@ var readType = function(dataView, idx, t, struct) {
           } else {
             length = struct[length];
           }
+	} else if (typeof length == 'object') { // branch
+          i = idx[0];
+          for (var k=0; k < t.length; k++) {
+            idx[0] = i;
+            v = readType(dataView, idx, t[k], struct); 
+            if (v) break;
+          }
+          return v;
         } else if (length < 0) {
           length = dataView.byteLength - idx[0] + length;
         }
         v = new Array(length);
-        for (var i=0; i<length; i++) {
+        for (i=0; i<length; i++) {
           v[i] = readType(dataView, idx, ta, struct);
         }
         return v;

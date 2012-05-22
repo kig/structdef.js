@@ -11,10 +11,42 @@
 document.querySelector('input[type="file"]').onchange = function(e) {
   var reader = new FileReader();
 
+  var xyDef = {x: 'float64le', y: 'float64le'};
+  var polyDef = {
+    minX: 'float64le',
+    minY: 'float64le',
+    maxX: 'float64le',
+    maxY: 'float64le',
+    partCount: 'int32le',
+    pointCount: 'int32le',
+    parts: ['int32le', 'partCount'],
+    points: [xyDef, 'pointCount']
+  };
+
+  var shapeDef = [
+    {
+      number: 'int32le=0' // Null
+    },
+    {
+      number: 'int32le=1', // Point
+      content: xyDef
+    },
+    {
+      number: 'int32le=3', // Polyline
+      content: polyDef
+    },
+    {
+      number: 'int32le=5', // Polygon
+      content: polyDef
+    },
+    ['uint8', 'length*2'] // Catch-all
+  ];
+
+
   var recordDef = {
     number: 'int32',
     length: 'int32',
-    shape: ['uint8', 'length*2']
+    shape: shapeDef
   };
 
   var shpDef = {
@@ -41,7 +73,10 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     var obj = readStruct(dv, idx, shpDef);
     if (obj) { 
       for (var i=0; i<obj.records.length; i++) {
-        obj.records[i].shape = "uint8["+obj.records[i].shape.length+"]";
+        var c = obj.records[i].shape.content;
+        if (c && c.points) {
+          c.points = "pointXY["+c.points.length+"]";
+        }
       }
       pre.textContent = JSON.stringify(obj, null, 4);
     } else {
