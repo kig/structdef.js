@@ -350,7 +350,7 @@ var nativeToEndian = function(array, littleEndian) {
 var flipArrayEndianness = function(array) {
   var u8 = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
   for (var i=0; i<array.byteLength; i+=array.BYTES_PER_ELEMENT) {
-    for (var j=i+elementSize-1, k=i; j>k; j--, k++) {
+    for (var j=i+array.BYTES_PER_ELEMENT-1, k=i; j>k; j--, k++) {
       var tmp = u8[k];
       u8[k] = u8[j];
       u8[j] = tmp;
