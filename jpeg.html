@@ -11,11 +11,29 @@
 document.querySelector('input[type="file"]').onchange = function(e) {
   var reader = new FileReader();
 
-  var jpegMarkerDef = {
-    tag: 'uint16!=0xFFDA',
-    length: 'uint16',
-    data: ['uint8', 'length-2']
-  };
+  var tiffDef = [
+    { tiff1: 'uint32=0x49492A00', // little-endian
+      ifdOffset: 'uint32le',
+      padding: ['uint8', 'ifdOffset-8']
+    }
+    { tiff1: 'uint32=0x4D4D002A', // big-endian
+      ifdOffset: 'uint32',
+      padding: ['uint8', 'ifdOffset-8']
+    }
+  ];
+
+  var jpegMarkerDef = [
+    { tag: 'uint16=0xFFE1', // EXIF 
+      length: 'uint16',
+      exif: 'string:6=Exif\000\000',
+      tiff: ['uint8', 'length-8']
+    },
+    {
+      tag: 'uint16!=0xFFDA',
+      length: 'uint16',
+      data: ['uint8', 'length-2']
+    }
+  ];
 
   var jpegImageStream = {
     tag: 'uint16=0xFFDA',

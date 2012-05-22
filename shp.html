@@ -20,7 +20,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     partCount: 'int32le',
     pointCount: 'int32le',
     parts: ['int32le', 'partCount'],
-    points: [xyDef, 'pointCount']
+    points: ['float64le', 'pointCount*2']
   };
 
   var shapeDef = [
@@ -72,12 +72,6 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     pre = document.querySelector('pre');
     var obj = readStruct(dv, idx, shpDef);
     if (obj) { 
-      for (var i=0; i<obj.records.length; i++) {
-        var c = obj.records[i].shape.content;
-        if (c && c.points) {
-          c.points = "pointXY["+c.points.length+"]";
-        }
-      }
       pre.textContent = JSON.stringify(obj, null, 4);
     } else {
       pre.textContent = "Failed to parse SHP at "+idx[0]+" :(";

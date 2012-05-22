@@ -19,6 +19,7 @@ var neqCmp = function(a, b) { return a != b; };
 
 var readType = function(dataView, idx, t, struct) {
   var v, paddedTo = 0, le = false, tr, ref, cmp = eqCmp;
+  var i,j,k,c;
   if (typeof t == 'string' && t.indexOf("=") > -1) {
     tr = t.split("=");
     t = tr[0];
@@ -80,10 +81,20 @@ var readType = function(dataView, idx, t, struct) {
       idx[0] += Math.max(8, paddedTo);
       return v;
 
+    case 'string':
+      v = '';
+      i = 0;
+      for (i = 0; i < paddedTo; i++) {
+        c = dataView.getUint8(idx[0] + i);
+        v += String.fromCharCode(c);
+      }
+      if (ref != null && !cmp(ref, v)) return null;
+      idx[0] += paddedTo;
+      return v;
+
     case 'cstring':    
       v = '';
-      var c;
-      var i = 0;
+      i = 0;
       if (paddedTo) {
         for (i = 0; i < paddedTo; i++) {
           c = dataView.getUint8(idx[0] + i);
@@ -145,7 +156,7 @@ var readType = function(dataView, idx, t, struct) {
           }
 	} else if (typeof length == 'object') { // branch
           i = idx[0];
-          for (var k=0; k < t.length; k++) {
+          for (k=0; k < t.length; k++) {
             idx[0] = i;
             v = readType(dataView, idx, t[k], struct); 
             if (v) break;
@@ -154,11 +165,74 @@ var readType = function(dataView, idx, t, struct) {
         } else if (length < 0) {
           length = dataView.byteLength - idx[0] + length;
         }
-        v = new Array(length);
-        for (i=0; i<length; i++) {
-          v[i] = readType(dataView, idx, ta, struct);
+        if (/^(u?int(8|16|32)|float(32|64))(le)?$/.test(ta)) {
+          // Create Typed Array and swizzle in-place
+          switch(ta.replace(/le$/, '')) {
+            case 'uint8': 
+              v = new Uint8Array(dataView.buffer, idx[0], length);
+              break;
+            case 'uint16': 
+              if (idx[0] % 8 == 2) {
+                v = new Uint16Array(dataView.buffer, idx[0], length);
+              } else {
+                v = new Uint16Array(length);
+                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              }
+              break;
+            case 'uint32': 
+              if (idx[0] % 8 == 4) {
+                v = new Uint32Array(dataView.buffer, idx[0], length);
+              } else {
+                v = new Uint32Array(length);
+                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              }
+              break;
+            case 'int8': 
+              v = new Int8Array(dataView.buffer, idx[0], length);
+              break;
+            case 'int16': 
+              if (idx[0] % 8 == 2) {
+                v = new Int16Array(dataView.buffer, idx[0], length);
+              } else {
+                v = new Int16Array(length);
+                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              }
+              break;
+            case 'int32': 
+              if (idx[0] % 8 == 4) {
+                v = new Int32Array(dataView.buffer, idx[0], length);
+              } else {
+                v = new Int32Array(length);
+                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              }
+              break;
+            case 'float32': 
+              if (idx[0] % 4 == 0) {
+                v = new Float32Array(dataView.buffer, idx[0], length);
+              } else {
+                v = new Float32Array(length);
+                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              }
+              break;
+            case 'float64': 
+              if (idx[0] % 8 == 0) {
+                v = new Float64Array(dataView.buffer, idx[0], length);
+              } else {
+                v = new Float64Array(length);
+                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              }
+              break;
+          }
+          arrayToNative(v, /le$/.test(ta));
+          idx[0] += v.byteLength;
+          return v;
+        } else {
+          v = new Array(length);
+          for (i=0; i<length; i++) {
+            v[i] = readType(dataView, idx, ta, struct);
+          }
+          return v;
         }
-        return v;
       } else {
         return readStruct(dataView, idx, t);
       }
@@ -255,3 +329,32 @@ var writeType = function(dataView, idx, t, v) {
   }
 };
 
+ArrayBuffer.littleEndian = new Int8Array(new Int16Array([1]).buffer)[0] > 0;
+
+var arrayToNative = function(array, arrayIsLittleEndian) {
+  if (!!arrayIsLittleEndian == ArrayBuffer.littleEndian) {
+    return array;
+  } else {
+    return flipArrayEndianness(array);
+  }
+};
+
+var nativeToEndian = function(array, littleEndian) {
+  if (ArrayBuffer.littleEndian == !!littleEndian) {
+    return array;
+  } else {
+    return flipArrayEndianness(array);
+  }
+};
+
+var flipArrayEndianness = function(array) {
+  var u8 = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+  for (var i=0; i<array.byteLength; i+=array.BYTES_PER_ELEMENT) {
+    for (var j=i+elementSize-1, k=i; j>k; j--, k++) {
+      var tmp = u8[k];
+      u8[k] = u8[j];
+      u8[j] = tmp;
+    }
+  }
+  return array;
+};
