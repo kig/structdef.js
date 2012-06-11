@@ -1,4 +1,5 @@
 <html>
+<body></body>
 <script src="DataStream.js"></script>
 <script>
   function assert(b) {
@@ -309,6 +310,9 @@
   testType(ds, 'Float32', 4);
   testType(ds, 'Float64', 8);
 
+  var p = document.createElement('p');
+  p.textContent = 'tests passed';
+  document.body.appendChild(p);
   console.log('tests passed');
 
 </script>
