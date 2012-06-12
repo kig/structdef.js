@@ -483,25 +483,50 @@ DataStream.prototype.readStruct = function(structDefinition) {
 };
 
 DataStream.prototype.readCString = function(length) {
+  var blen = this.byteLength;
   if (length != null) {
-    var pos = this.position;
-    var i = 0;
     var s = '';
-    var c = this.readUint8();
-    while (c != 0 && i < length) {
-      s += String.fromCharCode(c);
+    var i = 0;
+    for (i=0; i<length && this.position < blen; i++) {
       c = this.readUint8();
+      if (c == 0) {
+        break;
+      }
+      s += String.fromCharCode(c);
     }
-    this.position = pos + length;
+    for (; i<length && this.position < blen; i++) {
+      this.readUint8();
+    }
     return s;
   } else {
     var s = '';
-    var c = this.readUint8();
-    while (c != 0) {
-      s += String.fromCharCode(c);
+    var c = 0;
+    while (this.position < blen) {
       c = this.readUint8();
+      if (c == 0) {
+        break;
+      }
+      s += String.fromCharCode(c);
     }
     return s;
+  }
+};
+
+DataStream.prototype.writeCString = function(s, length) {
+  if (length != null) {
+    var i = 0;
+    var len = Math.min(s.length, length);
+    for (i=0; i<len; i++) {
+      this.writeUint8(s.charCodeAt(i));
+    }
+    for (; i<length; i++) {
+      this.writeUint8(0);
+    }
+  } else {
+    for (var i=0; i<s.length; i++) {
+      this.writeUint8(s.charCodeAt(i));
+    }
+    this.writeUint8(0);
   }
 };
 
@@ -717,10 +742,7 @@ DataStream.prototype.writeType = function(t, v, struct) {
       break;
 
     case 'cstring':
-      for (var i=0; i<v.length; i++) {
-        this.writeUint8(v.charCodeAt(i));
-      }
-      this.writeUint8(0);
+      this.writeCString(v, lengthOverride);
       break;
 
     default:

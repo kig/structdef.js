@@ -369,9 +369,7 @@
       'endNote', 'uint8'
     ];
     var u4 = [0,8,1,2,3,4,5,6,255];
-    var ds4 = new DataStream();
-    ds4.writeUint8Array(u4);
-    ds4.seek(0);
+    var ds4 = new DataStream(new Uint8Array(u4));
     var o4 = ds4.readStruct(def4);
     assertEqual(o4.length, 8);
     assertEqual(o4.endNote, 255);
@@ -382,7 +380,7 @@
     ds4.seek(pos);
     var o4b = ds4.readStruct(def4);
     assertEqual(JSON.stringify(o4), JSON.stringify(o4b));
-    console.log(o4b);
+    assertEqualArray(u4.concat(u4), new Uint8Array(ds4.buffer));
   };
 
   test_constructor();
@@ -473,6 +471,22 @@
   testType(ds, 'Float64', 8);
 
   testStruct();
+
+  var dss = new DataStream();
+  var s = "Hello, World!";
+  dss.writeCString(s);
+  assertEqual(dss.byteLength, s.length + 1);
+  dss.seek(0);
+  assertEqual(s, dss.readCString());
+  var dp = dss.position;
+  dss.writeCString(s,s.length); // no zero terminate
+  dss.seek(dp);
+  assertEqual(s, dss.readCString());
+  dss.writeCString(s,s.length); // no zero terminate
+  dss.seek(dp);
+  assertEqual(s, dss.readCString(s.length));
+  dss.buffer;
+  assertEqual(s, dss.readCString(s.length));
 
   var p = document.createElement('p');
   p.textContent = 'tests passed';
