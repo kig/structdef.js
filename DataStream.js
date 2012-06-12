@@ -506,6 +506,11 @@ DataStream.prototype.readCString = function(length) {
 };
 
 DataStream.prototype.readType = function(t, struct) {
+  if (typeof t == "function") {
+    return t(this, struct);
+  } else if (typeof t == "object" && !(t instanceof Array)) {
+    return t.get(this, struct);
+  }
   var v = null;
   var lengthOverride = null;
   var pos = this.position;
@@ -628,11 +633,16 @@ DataStream.prototype.readType = function(t, struct) {
 DataStream.prototype.writeStruct = function(structDefinition, struct) {
   for (var i = 0; i < structDefinition.length; i+=2) {
     var t = structDefinition[i+1];
-    this.writeType(t, struct[structDefinition[i]]);
+    this.writeType(t, struct[structDefinition[i]], struct);
   }
 };
 
-DataStream.prototype.writeType = function(t, v) {
+DataStream.prototype.writeType = function(t, v, struct) {
+  if (typeof t == "function") {
+    return t(this, v);
+  } else if (typeof t == "object" && !(t instanceof Array)) {
+    return t.set(this, v, struct);
+  }
   var lengthOverride = null;
   var pos = this.position;
   if (/:/.test(t)) {
