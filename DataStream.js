@@ -441,14 +441,6 @@ DataStream.prototype.writeFloat64 = function(v, e) {
 };
 
 
-DataStream.prototype.readStruct = function(structDefinition) {
-  var idx = [this.position];
-  var rv = DataStream.readStruct(this._dataView, idx, structDefinition);
-  this.position = idx[0];
-  return rv;
-};
-
-
 DataStream.endianness = new Int8Array(new Int16Array([1]).buffer)[0] > 0;
 
 DataStream.arrayToNative = function(array, arrayIsLittleEndian) {
@@ -480,300 +472,263 @@ DataStream.flipArrayEndianness = function(array) {
 };
 
 
-DataStream.readStruct = function(dataView, idx, structDefinition) {
+DataStream.prototype.readStruct = function(structDefinition) {
   var struct = {}, t, v, n;
-  for (n in structDefinition) {
-    t = structDefinition[n];
-    v = DataStream.readType(dataView, idx, t, struct);
-    if (v == null) {
-      return null;
-    }
-    struct[n] = v;
+  for (var i=0; i<structDefinition.length; i+=2) {
+    t = structDefinition[i+1];
+    v = this.readType(t, struct);
+    struct[structDefinition[i]] = v;
   }
   return struct;
 };
 
-DataStream.eqCmp = function(a, b) { return a == b; };
-DataStream.neqCmp = function(a, b) { return a != b; };
-
-DataStream.readType = function(dataView, idx, t, struct) {
-  var v, paddedTo = 0, le = DataStream.BIG_ENDIAN, tr, ref, cmp = this.eqCmp;
-  var i,j,k,c;
-  if (typeof t == 'string' && t.indexOf("=") > -1) {
-    tr = t.split("=");
-    t = tr[0];
-    ref = tr[1];
-    if (t.charAt(t.length-1) == '!') {
-      t = t.slice(0,-1);
-      cmp = this.neqCmp;
+DataStream.prototype.readCString = function(length) {
+  if (length != null) {
+    var pos = this.position;
+    var i = 0;
+    var s = '';
+    var c = this.readUint8();
+    while (c != 0 && i < length) {
+      s += String.fromCharCode(c);
+      c = this.readUint8();
     }
+    this.position = pos + length;
+    return s;
+  } else {
+    var s = '';
+    var c = this.readUint8();
+    while (c != 0) {
+      s += String.fromCharCode(c);
+      c = this.readUint8();
+    }
+    return s;
   }
-  if (typeof t == 'string' && t.indexOf(":") > -1) {
+};
+
+DataStream.prototype.readType = function(t, struct) {
+  var v = null;
+  var lengthOverride = null;
+  var pos = this.position;
+  if (/:/.test(t)) {
     var tp = t.split(":");
     t = tp[0];
-    paddedTo = parseInt(tp[1]);
-  }
-  if (/^(u?int(8|16|32)|float(32|64))le$/.test(t)) {
-    t = t.slice(0, -2);
-    le = DataStream.LITTLE_ENDIAN;
+    lengthOverride = parseInt(tp[1]);
   }
   switch(t) {
 
     case 'uint8':
-      v = dataView.getUint8(idx[0], le);
-      if (ref != null && !cmp(parseInt(ref), v)) return null;
-      idx[0] += Math.max(1, paddedTo);
-      return v;
+      v = this.readUint8(); break;
     case 'int8':
-      v = dataView.getInt8(idx[0], le);
-      if (ref != null && !cmp(parseInt(ref), v)) return null;
-      idx[0] += Math.max(1, paddedTo);
-      return v;
-    case 'uint16':
-      v = dataView.getUint16(idx[0], le);
-      if (ref != null && !cmp(parseInt(ref), v)) return null;
-      idx[0] += Math.max(2, paddedTo);
-      return v;
-    case 'int16':
-      v = dataView.getInt16(idx[0], le);
-      if (ref != null && !cmp(parseInt(ref), v)) return null;
-      idx[0] += Math.max(2, paddedTo);
-      return v;
-    case 'uint32':
-      v = dataView.getUint32(idx[0], le);
-      if (ref != null && !cmp(parseInt(ref), v)) return null;
-      idx[0] += Math.max(4, paddedTo);
-      return v;
-    case 'int32':
-      v = dataView.getInt32(idx[0], le);
-      if (ref != null && !cmp(parseInt(ref), v)) return null;
-      idx[0] += Math.max(4, paddedTo);
-      return v;
-    case 'float32':
-      v = dataView.getFloat32(idx[0], le);
-      if (ref != null && !cmp(parseFloat(ref), v)) return null;
-      idx[0] += Math.max(4, paddedTo);
-      return v;
-    case 'float64':
-      v = dataView.getFloat64(idx[0], le);
-      if (ref != null && !cmp(parseFloat(ref), v)) return null;
-      idx[0] += Math.max(8, paddedTo);
-      return v;
+      v = this.readInt8(); break;
 
-    case 'string':
-      v = '';
-      i = 0;
-      for (i = 0; i < paddedTo; i++) {
-        c = dataView.getUint8(idx[0] + i);
-        v += String.fromCharCode(c);
-      }
-      if (ref != null && !cmp(ref, v)) return null;
-      idx[0] += paddedTo;
-      return v;
+    case 'uint16':
+      v = this.readUint16(this.endianness); break;
+    case 'int16':
+      v = this.readInt16(this.endianness); break;
+    case 'uint32':
+      v = this.readUint32(this.endianness); break;
+    case 'int32':
+      v = this.readInt32(this.endianness); break;
+    case 'float32':
+      v = this.readFloat32(this.endianness); break;
+    case 'float64':
+      v = this.readFloat64(this.endianness); break;
+
+    case 'uint16be':
+      v = this.readUint16(DataStream.BIG_ENDIAN); break;
+    case 'int16be':
+      v = this.readInt16(DataStream.BIG_ENDIAN); break;
+    case 'uint32be':
+      v = this.readUint32(DataStream.BIG_ENDIAN); break;
+    case 'int32be':
+      v = this.readInt32(DataStream.BIG_ENDIAN); break;
+    case 'float32be':
+      v = this.readFloat32(DataStream.BIG_ENDIAN); break;
+    case 'float64be':
+      v = this.readFloat64(DataStream.BIG_ENDIAN); break;
+
+    case 'uint16le':
+      v = this.readUint16(DataStream.LITTLE_ENDIAN); break;
+    case 'int16le':
+      v = this.readInt16(DataStream.LITTLE_ENDIAN); break;
+    case 'uint32le':
+      v = this.readUint32(DataStream.LITTLE_ENDIAN); break;
+    case 'int32le':
+      v = this.readInt32(DataStream.LITTLE_ENDIAN); break;
+    case 'float32le':
+      v = this.readFloat32(DataStream.LITTLE_ENDIAN); break;
+    case 'float64le':
+      v = this.readFloat64(DataStream.LITTLE_ENDIAN); break;
 
     case 'cstring':
-      v = '';
-      i = 0;
-      if (paddedTo) {
-        for (i = 0; i < paddedTo; i++) {
-          c = dataView.getUint8(idx[0] + i);
-          if (c == 0) {
-            break;
-          }
-          v += String.fromCharCode(c);
-        }
-      } else {
-        while (c = dataView.getUint8(idx[0] + i++)) {
-          v += String.fromCharCode(c);
-        }
-      }
-      if (ref != null && !cmp(ref, v)) return null;
-      idx[0] += Math.max(i, paddedTo);
-      return v;
+      v = this.readCString(lengthOverride); break;
 
     default:
-      if (t instanceof Array) {
-        var ta = t[0];
-        var length = t[1];
-        if (typeof length == 'string') {
-          if (length == '*') {
-            v = [];
-            var obj = null;
-            while (idx[0] < dataView.byteLength) {
-              obj = DataStream.readType(dataView, idx, ta, struct);
-              if (!obj) break;
-              v.push(obj);
-            }
-            return v;
-          } else if (/[\*\-\+\/]/.test(length)) {
-            var segs = length.replace(/\s+/g,'').split(/(?=[\*\-\+\/])/);
-            var sum = 0;
-            for (var j=0; j<segs.length; j++) {
-              var seg = segs[j];
-              var cmd = seg.charAt(0);
-              if (/[\*\-\+\/]/.test(cmd)) {
-                seg = seg.substring(1);
-              } else {
-                cmd = "+";
-              }
-              if (/^\d+$/.test(seg)) {
-                seg = parseInt(seg);
-              } else {
-                seg = struct[seg];
-              }
-              switch(cmd) {
-                case "+": sum += seg; break;
-                case "-": sum -= seg; break;
-                case "/": sum /= seg; break;
-                case "*": sum *= seg; break;
-                default: sum = seg;
-              }
-            }
-            length = sum;
-          } else {
-            length = struct[length];
-          }
-        } else if (typeof length == 'object') { // branch
-          i = idx[0];
-          for (k=0; k < t.length; k++) {
-            idx[0] = i;
-            v = DataStream.readType(dataView, idx, t[k], struct);
-            if (v) break;
-          }
-          return v;
-        } else if (length < 0) {
-          length = dataView.byteLength - idx[0] + length;
+      if (t.length == 3) {
+        var ta = t[1];
+        var len = t[2];
+        var length = 0;
+        if (typeof len == 'function') {
+          length = len(struct, t);
+        } else if (typeof len == 'string' && struct[len] != null) {
+          length = parseInt(struct[len]);
+        } else {
+          length = parseInt(len);
         }
-        if (/^(u?int(8|16|32)|float(32|64))(le)?$/.test(ta)) {
-          // Create Typed Array and swizzle in-place
-          switch(ta.replace(/le$/, '')) {
+        if (typeof ta == "string") {
+          var tap = ta.replace(/(le|be)$/, '');
+          var endianness = null;
+          if (/le$/.test(ta)) {
+            endianness = DataStream.LITTLE_ENDIAN;
+          } else if (/be$/.test(ta)) {
+            endianness = DataStream.BIG_ENDIAN;
+          }
+          switch(tap) {
             case 'uint8':
-              v = new Uint8Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readUint8Array(length); break;
             case 'uint16':
-              v = new Uint16Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readUint16Array(length, endianness); break;
             case 'uint32':
-              v = new Uint32Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readUint32Array(length, endianness); break;
             case 'int8':
-              v = new Int8Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readInt8Array(length); break;
             case 'int16':
-              v = new Int16Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readInt16Array(length, endianness); break;
             case 'int32':
-              v = new Int32Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readInt32Array(length, endianness); break;
             case 'float32':
-              v = new Float32Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              break;
+              v = this.readFloat32Array(length, endianness); break;
             case 'float64':
-              v = new Float64Array(length);
-              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
+              v = this.readFloat64Array(length, endianness); break;
+            case 'cstring':
+              v = new Array(length);
+              for (var i=0; i<length; i++) {
+                v[i] = this.readType(ta, struct);
+              }
               break;
           }
-          DataStream.arrayToNative(v, /le$/.test(ta) ? DataStream.LITTLE_ENDIAN : DataStream.BIG_ENDIAN);
-          idx[0] += v.byteLength;
-          return v;
         } else {
           v = new Array(length);
-          for (i=0; i<length; i++) {
-            v[i] = DataStream.readType(dataView, idx, ta, struct);
+          for (var i=0; i<length; i++) {
+            v[i] = this.readType(ta, struct);
           }
-          return v;
         }
+        break;
       } else {
-        return DataStream.readStruct(dataView, idx, t);
+        v = this.readStruct(t);
+        break;
       }
   }
+  if (lengthOverride != null) {
+    this.position = pos + lengthOverride;
+  }
+  return v;
 };
 
 DataStream.prototype.writeStruct = function(structDefinition, struct) {
-  DataStream.writeStruct(this, structDefinition, struct);
-};
-
-DataStream.writeStruct = function(dataStream, structDefinition, struct) {
-  for (var n in structDefinition) {
-    var t = structDefinition[n];
-    DataStream.writeType(dataStream, t, struct[n]);
+  for (var i = 0; i < structDefinition.length; i+=2) {
+    var t = structDefinition[i+1];
+    this.writeType(t, struct[structDefinition[i]]);
   }
-  return;
 };
 
-DataStream.writeType = function(dataStream, t, v) {
-  switch(t) {
+DataStream.prototype.writeType = function(t, v) {
+  var lengthOverride = null;
+  var pos = this.position;
+  if (/:/.test(t)) {
+    var tp = t.split(":");
+    t = tp[0];
+    lengthOverride = parseInt(tp[1]);
+  }
 
+  switch(t) {
     case 'uint8':
-      dataStream.writeUint8(v);
-      return;
+      this.writeUint8(v);
+      break;
     case 'int8':
-      dataStream.writeInt8(v);
-      return;
+      this.writeInt8(v);
+      break;
 
     case 'uint16':
-      dataStream.writeUint16(v, DataStream.BIG_ENDIAN);
-      return;
+      this.writeUint16(v, this.endianness);
+      break;
     case 'int16':
-      dataStream.writeInt16(v, DataStream.BIG_ENDIAN);
-      return;
+      this.writeInt16(v, this.endianness);
+      break;
     case 'uint32':
-      dataStream.writeUint32(v, DataStream.BIG_ENDIAN);
-      return;
+      this.writeUint32(v, this.endianness);
+      break;
     case 'int32':
-      dataStream.writeInt32(v, DataStream.BIG_ENDIAN);
-      return;
+      this.writeInt32(v, this.endianness);
+      break;
     case 'float32':
-      dataStream.writeFloat32(v, DataStream.BIG_ENDIAN);
-      return;
+      this.writeFloat32(v, this.endianness);
+      break;
     case 'float64':
-      dataStream.writeFloat64(v, DataStream.BIG_ENDIAN);
-      return;
+      this.writeFloat64(v, this.endianness);
+      break;
+
+    case 'uint16be':
+      this.writeUint16(v, DataStream.BIG_ENDIAN);
+      break;
+    case 'int16be':
+      this.writeInt16(v, DataStream.BIG_ENDIAN);
+      break;
+    case 'uint32be':
+      this.writeUint32(v, DataStream.BIG_ENDIAN);
+      break;
+    case 'int32be':
+      this.writeInt32(v, DataStream.BIG_ENDIAN);
+      break;
+    case 'float32be':
+      this.writeFloat32(v, DataStream.BIG_ENDIAN);
+      break;
+    case 'float64be':
+      this.writeFloat64(v, DataStream.BIG_ENDIAN);
+      break;
 
     case 'uint16le':
-      dataStream.writeUint16(v, DataStream.LITTLE_ENDIAN);
-      return;
+      this.writeUint16(v, DataStream.LITTLE_ENDIAN);
+      break;
     case 'int16le':
-      dataStream.writeInt16(v, DataStream.LITTLE_ENDIAN);
-      return;
+      this.writeInt16(v, DataStream.LITTLE_ENDIAN);
+      break;
     case 'uint32le':
-      dataStream.writeUint32(v, DataStream.LITTLE_ENDIAN);
-      return;
+      this.writeUint32(v, DataStream.LITTLE_ENDIAN);
+      break;
     case 'int32le':
-      dataStream.writeInt32(v, DataStream.LITTLE_ENDIAN);
-      return;
+      this.writeInt32(v, DataStream.LITTLE_ENDIAN);
+      break;
     case 'float32le':
-      dataStream.writeFloat32(v, DataStream.LITTLE_ENDIAN);
-      return;
+      this.writeFloat32(v, DataStream.LITTLE_ENDIAN);
+      break;
     case 'float64le':
-      dataStream.writeFloat64(v, DataStream.LITTLE_ENDIAN);
-      return;
+      this.writeFloat64(v, DataStream.LITTLE_ENDIAN);
+      break;
 
     case 'cstring':
       for (var i=0; i<v.length; i++) {
-        dataStream.writeUint8(v.charCodeAt(i));
+        this.writeUint8(v.charCodeAt(i));
       }
-      dataStream.writeUint8(0);
-      return;
+      this.writeUint8(0);
+      break;
 
     default:
-      if (t instanceof Array) {
-        var ta = t[0];
+      if (t.length == 3) {
+        var ta = t[1];
         for (var i=0; i<v.length; i++) {
-          DataStream.writeType(dataStream, ta, v[i]);
+          this.writeType(ta, v[i]);
         }
-        return;
+        break;
       } else {
-        DataStream.writeStruct(dataStream, t, v);
-        return;
+        this.writeStruct(t, v);
+        break;
       }
+  }
+  if (lengthOverride != null) {
+    this.position = pos;
+    this._realloc(lengthOverride);
+    this.position = pos + lengthOverride;
   }
 };
 

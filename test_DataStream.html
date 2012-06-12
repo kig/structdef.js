@@ -254,13 +254,19 @@
   };
 
   var testStruct = function() {
-    var def = {
-        tag: 'uint32',
-        code: 'uint32le',
-        embed: { tag:'uint32', code:'uint32le', greet:'cstring' },
-        length: 'uint16',
-        data: ['float32', 'length'],
-        greet: 'cstring' };
+    var embed = [
+      'tag', 'uint32be',
+      'code', 'uint32le',
+      'greet', 'cstring'
+    ];
+    var def = [
+      'tag', 'cstring:4',
+      'code', 'uint32le',
+      'embed', embed,
+      'length', 'uint16be',
+      'data', ['[]', 'float32be', 'length'],
+      'greet', 'cstring'
+    ];
 
     var u = [137,  80,  78,  71,   0, 136, 136, 255, 137,  80,
               78,  71,   0, 136, 136, 255,  72, 101, 108, 108,
