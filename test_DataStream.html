@@ -486,7 +486,7 @@
   dss.seek(dp);
   assertEqual(s, dss.readCString(s.length));
   dss.buffer;
-  assertEqual(s, dss.readCString(s.length));
+  assertEqual(s, dss.readCString());
 
   var p = document.createElement('p');
   p.textContent = 'tests passed';
