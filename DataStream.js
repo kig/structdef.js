@@ -484,7 +484,7 @@ DataStream.readStruct = function(dataView, idx, structDefinition) {
   var struct = {}, t, v, n;
   for (n in structDefinition) {
     t = structDefinition[n];
-    v = readType(dataView, idx, t, struct);
+    v = DataStream.readType(dataView, idx, t, struct);
     if (v == null) {
       return null;
     }
@@ -633,7 +633,7 @@ DataStream.readType = function(dataView, idx, t, struct) {
           } else {
             length = struct[length];
           }
-  } else if (typeof length == 'object') { // branch
+        } else if (typeof length == 'object') { // branch
           i = idx[0];
           for (k=0; k < t.length; k++) {
             idx[0] = i;
@@ -702,7 +702,7 @@ DataStream.readType = function(dataView, idx, t, struct) {
               }
               break;
           }
-          arrayToNative(v, /le$/.test(ta));
+          DataStream.arrayToNative(v, /le$/.test(ta));
           idx[0] += v.byteLength;
           return v;
         } else {
