@@ -110,7 +110,7 @@ Object.defineProperty(DataStream.prototype, 'dataView',
     } });
 
 DataStream.prototype._realloc = function(extra) {
-  if (!this.dynamicSize) {
+  if (!this._dynamicSize) {
     return;
   }
   var req = this._byteOffset + this.position + extra;
@@ -165,17 +165,17 @@ DataStream.prototype.isEof = function() {
 };
 
 
-DataStream.prototype.mapInt32Array = function(length) {
+DataStream.prototype.mapInt32Array = function(length, e) {
   this._realloc(length * 4);
   var arr = new Int32Array(this.buffer, this.byteOffset+this.position, length);
-  DataStream.arrayToNative(arr, this.endianness);
+  DataStream.arrayToNative(arr, e == null ? this.endianness : e);
   return arr;
 };
 
-DataStream.prototype.mapInt16Array = function(length) {
+DataStream.prototype.mapInt16Array = function(length, e) {
   this._realloc(length * 2);
   var arr = new Int16Array(this.buffer, this.byteOffset+this.position, length);
-  DataStream.arrayToNative(arr, this.endianness);
+  DataStream.arrayToNative(arr, e == null ? this.endianness : e);
   return arr;
 };
 
@@ -185,17 +185,17 @@ DataStream.prototype.mapInt8Array = function(length) {
   return arr;
 };
 
-DataStream.prototype.mapUint32Array = function(length) {
+DataStream.prototype.mapUint32Array = function(length, e) {
   this._realloc(length * 4);
   var arr = new Uint32Array(this.buffer, this.byteOffset+this.position, length);
-  DataStream.arrayToNative(arr, this.endianness);
+  DataStream.arrayToNative(arr, e == null ? this.endianness : e);
   return arr;
 };
 
-DataStream.prototype.mapUint16Array = function(length) {
+DataStream.prototype.mapUint16Array = function(length, e) {
   this._realloc(length * 2);
   var arr = new Uint16Array(this.buffer, this.byteOffset+this.position, length);
-  DataStream.arrayToNative(arr, this.endianness);
+  DataStream.arrayToNative(arr, e == null ? this.endianness : e);
   return arr;
 };
 
@@ -205,33 +205,33 @@ DataStream.prototype.mapUint8Array = function(length) {
   return arr;
 };
 
-DataStream.prototype.mapFloat64Array = function(length) {
+DataStream.prototype.mapFloat64Array = function(length, e) {
   this._realloc(length * 8);
   var arr = new Float64Array(this.buffer, this.byteOffset+this.position, length);
-  DataStream.arrayToNative(arr, this.endianness);
+  DataStream.arrayToNative(arr, e == null ? this.endianness : e);
   return arr;
 };
 
-DataStream.prototype.mapFloat32Array = function(length) {
+DataStream.prototype.mapFloat32Array = function(length, e) {
   this._realloc(length * 4);
   var arr = new Float32Array(this.buffer, this.byteOffset+this.position, length);
-  DataStream.arrayToNative(arr, this.endianness);
+  DataStream.arrayToNative(arr, e == null ? this.endianness : e);
   return arr;
 };
 
 
-DataStream.prototype.readInt32Array = function(length) {
+DataStream.prototype.readInt32Array = function(length, e) {
   var arr = new Int32Array(length);
   for (var i=0; i<length; i++) {
-    arr[i] = this.readInt32();
+    arr[i] = this.readInt32(e);
   }
   return arr;
 };
 
-DataStream.prototype.readInt16Array = function(length) {
+DataStream.prototype.readInt16Array = function(length, e) {
   var arr = new Int16Array(length);
   for (var i=0; i<length; i++) {
-    arr[i] = this.readInt16();
+    arr[i] = this.readInt16(e);
   }
   return arr;
 };
@@ -244,18 +244,18 @@ DataStream.prototype.readInt8Array = function(length) {
   return arr;
 };
 
-DataStream.prototype.readUint32Array = function(length) {
+DataStream.prototype.readUint32Array = function(length, e) {
   var arr = new Uint32Array(length);
   for (var i=0; i<length; i++) {
-    arr[i] = this.readUint32();
+    arr[i] = this.readUint32(e);
   }
   return arr;
 };
 
-DataStream.prototype.readUint16Array = function(length) {
+DataStream.prototype.readUint16Array = function(length, e) {
   var arr = new Uint16Array(length);
   for (var i=0; i<length; i++) {
-    arr[i] = this.readUint16();
+    arr[i] = this.readUint16(e);
   }
   return arr;
 };
@@ -268,34 +268,34 @@ DataStream.prototype.readUint8Array = function(length) {
   return arr;
 };
 
-DataStream.prototype.readFloat64Array = function(length) {
+DataStream.prototype.readFloat64Array = function(length, e) {
   var arr = new Float64Array(length);
   for (var i=0; i<length; i++) {
-    arr[i] = this.readFloat64();
+    arr[i] = this.readFloat64(e);
   }
   return arr;
 };
 
-DataStream.prototype.readFloat32Array = function(length) {
+DataStream.prototype.readFloat32Array = function(length, e) {
   var arr = new Float32Array(length);
   for (var i=0; i<length; i++) {
-    arr[i] = this.readFloat32();
+    arr[i] = this.readFloat32(e);
   }
   return arr;
 };
 
 
-DataStream.prototype.writeInt32Array = function(arr) {
+DataStream.prototype.writeInt32Array = function(arr, e) {
   this._realloc(arr.length * 4);
   for (var i=0; i<arr.length; i++) {
-    this.writeInt32(arr[i]);
+    this.writeInt32(arr[i], e);
   }
 };
 
-DataStream.prototype.writeInt16Array = function(arr) {
+DataStream.prototype.writeInt16Array = function(arr, e) {
   this._realloc(arr.length * 2);
   for (var i=0; i<arr.length; i++) {
-    this.writeInt16(arr[i]);
+    this.writeInt16(arr[i], e);
   }
 };
 
@@ -306,17 +306,17 @@ DataStream.prototype.writeInt8Array = function(arr) {
   }
 };
 
-DataStream.prototype.writeUint32Array = function(arr) {
+DataStream.prototype.writeUint32Array = function(arr, e) {
   this._realloc(arr.length * 4);
   for (var i=0; i<arr.length; i++) {
-    this.writeUint32(arr[i]);
+    this.writeUint32(arr[i], e);
   }
 };
 
-DataStream.prototype.writeUint16Array = function(arr) {
+DataStream.prototype.writeUint16Array = function(arr, e) {
   this._realloc(arr.length * 2);
   for (var i=0; i<arr.length; i++) {
-    this.writeUint16(arr[i]);
+    this.writeUint16(arr[i], e);
   }
 };
 
@@ -327,116 +327,116 @@ DataStream.prototype.writeUint8Array = function(arr) {
   }
 };
 
-DataStream.prototype.writeFloat64Array = function(arr) {
+DataStream.prototype.writeFloat64Array = function(arr, e) {
   this._realloc(arr.length * 8);
   for (var i=0; i<arr.length; i++) {
-    this.writeFloat64(arr[i]);
+    this.writeFloat64(arr[i], e);
   }
 };
 
-DataStream.prototype.writeFloat32Array = function(arr) {
+DataStream.prototype.writeFloat32Array = function(arr, e) {
   this._realloc(arr.length * 4);
   for (var i=0; i<arr.length; i++) {
-    this.writeFloat32(arr[i]);
+    this.writeFloat32(arr[i], e);
   }
 };
 
 
 
-DataStream.prototype.readInt32 = function() {
-  var v = this._dataView.getInt32(this.position, this.endianness);
+DataStream.prototype.readInt32 = function(e) {
+  var v = this._dataView.getInt32(this.position, e == null ? this.endianness : e);
   this.position += 4;
   return v;
 };
 
-DataStream.prototype.readInt16 = function() {
-  var v = this._dataView.getInt16(this.position, this.endianness);
+DataStream.prototype.readInt16 = function(e) {
+  var v = this._dataView.getInt16(this.position, e == null ? this.endianness : e);
   this.position += 2;
   return v;
 };
 
 DataStream.prototype.readInt8 = function() {
-  var v = this._dataView.getInt8(this.position, this.endianness);
+  var v = this._dataView.getInt8(this.position);
   this.position += 1;
   return v;
 };
 
-DataStream.prototype.readUint32 = function() {
-  var v = this._dataView.getUint32(this.position, this.endianness);
+DataStream.prototype.readUint32 = function(e) {
+  var v = this._dataView.getUint32(this.position, e == null ? this.endianness : e);
   this.position += 4;
   return v;
 };
 
-DataStream.prototype.readUint16 = function() {
-  var v = this._dataView.getUint16(this.position, this.endianness);
+DataStream.prototype.readUint16 = function(e) {
+  var v = this._dataView.getUint16(this.position, e == null ? this.endianness : e);
   this.position += 2;
   return v;
 };
 
 DataStream.prototype.readUint8 = function() {
-  var v = this._dataView.getUint8(this.position, this.endianness);
+  var v = this._dataView.getUint8(this.position);
   this.position += 1;
   return v;
 };
 
-DataStream.prototype.readFloat32 = function() {
-  var v = this._dataView.getFloat32(this.position, this.endianness);
+DataStream.prototype.readFloat32 = function(e) {
+  var v = this._dataView.getFloat32(this.position, e == null ? this.endianness : e);
   this.position += 4;
   return v;
 };
 
-DataStream.prototype.readFloat64 = function() {
-  var v = this._dataView.getFloat64(this.position, this.endianness);
+DataStream.prototype.readFloat64 = function(e) {
+  var v = this._dataView.getFloat64(this.position, e == null ? this.endianness : e);
   this.position += 8;
   return v;
 };
 
 
-DataStream.prototype.writeInt32 = function(v) {
+DataStream.prototype.writeInt32 = function(v, e) {
   this._realloc(4);
-  this._dataView.setInt32(this.position, v, this.endianness);
+  this._dataView.setInt32(this.position, v, e == null ? this.endianness : e);
   this.position += 4;
 };
 
-DataStream.prototype.writeInt16 = function(v) {
+DataStream.prototype.writeInt16 = function(v, e) {
   this._realloc(2);
-  this._dataView.setInt16(this.position, v, this.endianness);
+  this._dataView.setInt16(this.position, v, e == null ? this.endianness : e);
   this.position += 2;
 };
 
 DataStream.prototype.writeInt8 = function(v) {
   this._realloc(1);
-  this._dataView.setInt8(this.position, v, this.endianness);
+  this._dataView.setInt8(this.position, v);
   this.position += 1;
 };
 
-DataStream.prototype.writeUint32 = function(v) {
+DataStream.prototype.writeUint32 = function(v, e) {
   this._realloc(4);
-  this._dataView.setUint32(this.position, v, this.endianness);
+  this._dataView.setUint32(this.position, v, e == null ? this.endianness : e);
   this.position += 4;
 };
 
-DataStream.prototype.writeUint16 = function(v) {
+DataStream.prototype.writeUint16 = function(v, e) {
   this._realloc(2);
-  this._dataView.setUint16(this.position, v, this.endianness);
+  this._dataView.setUint16(this.position, v, e == null ? this.endianness : e);
   this.position += 2;
 };
 
 DataStream.prototype.writeUint8 = function(v) {
   this._realloc(1);
-  this._dataView.setUint8(this.position, v, this.endianness);
+  this._dataView.setUint8(this.position, v);
   this.position += 1;
 };
 
-DataStream.prototype.writeFloat32 = function(v) {
+DataStream.prototype.writeFloat32 = function(v, e) {
   this._realloc(4);
-  this._dataView.setFloat32(this.position, v, this.endianness);
+  this._dataView.setFloat32(this.position, v, e == null ? this.endianness : e);
   this.position += 4;
 };
 
-DataStream.prototype.writeFloat64 = function(v) {
+DataStream.prototype.writeFloat64 = function(v, e) {
   this._realloc(8);
-  this._dataView.setFloat64(this.position, v, this.endianness);
+  this._dataView.setFloat64(this.position, v, e == null ? this.endianness : e);
   this.position += 8;
 };
 
@@ -497,7 +497,7 @@ DataStream.eqCmp = function(a, b) { return a == b; };
 DataStream.neqCmp = function(a, b) { return a != b; };
 
 DataStream.readType = function(dataView, idx, t, struct) {
-  var v, paddedTo = 0, le = false, tr, ref, cmp = this.eqCmp;
+  var v, paddedTo = 0, le = DataStream.BIG_ENDIAN, tr, ref, cmp = this.eqCmp;
   var i,j,k,c;
   if (typeof t == 'string' && t.indexOf("=") > -1) {
     tr = t.split("=");
@@ -515,7 +515,7 @@ DataStream.readType = function(dataView, idx, t, struct) {
   }
   if (/^(u?int(8|16|32)|float(32|64))le$/.test(t)) {
     t = t.slice(0, -2);
-    le = true;
+    le = DataStream.LITTLE_ENDIAN;
   }
   switch(t) {
 
@@ -648,61 +648,39 @@ DataStream.readType = function(dataView, idx, t, struct) {
           // Create Typed Array and swizzle in-place
           switch(ta.replace(/le$/, '')) {
             case 'uint8':
-              v = new Uint8Array(dataView.buffer, idx[0], length);
+              v = new Uint8Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'uint16':
-              if (idx[0] % 8 == 2) {
-                v = new Uint16Array(dataView.buffer, idx[0], length);
-              } else {
-                v = new Uint16Array(length);
-                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              }
+              v = new Uint16Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'uint32':
-              if (idx[0] % 8 == 4) {
-                v = new Uint32Array(dataView.buffer, idx[0], length);
-              } else {
-                v = new Uint32Array(length);
-                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              }
+              v = new Uint32Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'int8':
-              v = new Int8Array(dataView.buffer, idx[0], length);
+              v = new Int8Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'int16':
-              if (idx[0] % 8 == 2) {
-                v = new Int16Array(dataView.buffer, idx[0], length);
-              } else {
-                v = new Int16Array(length);
-                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              }
+              v = new Int16Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'int32':
-              if (idx[0] % 8 == 4) {
-                v = new Int32Array(dataView.buffer, idx[0], length);
-              } else {
-                v = new Int32Array(length);
-                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              }
+              v = new Int32Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'float32':
-              if (idx[0] % 4 == 0) {
-                v = new Float32Array(dataView.buffer, idx[0], length);
-              } else {
-                v = new Float32Array(length);
-                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              }
+              v = new Float32Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
             case 'float64':
-              if (idx[0] % 8 == 0) {
-                v = new Float64Array(dataView.buffer, idx[0], length);
-              } else {
-                v = new Float64Array(length);
-                new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
-              }
+              v = new Float64Array(length);
+              new Int8Array(v.buffer).set(new Int8Array(dataView.buffer, idx[0], v.byteLength));
               break;
           }
-          DataStream.arrayToNative(v, /le$/.test(ta));
+          DataStream.arrayToNative(v, /le$/.test(ta) ? DataStream.LITTLE_ENDIAN : DataStream.BIG_ENDIAN);
           idx[0] += v.byteLength;
           return v;
         } else {
@@ -718,91 +696,82 @@ DataStream.readType = function(dataView, idx, t, struct) {
   }
 };
 
-DataStream.writeStruct = function(dataView, idx, structDefinition, struct) {
+DataStream.prototype.writeStruct = function(structDefinition, struct) {
+  DataStream.writeStruct(this, structDefinition, struct);
+};
+
+DataStream.writeStruct = function(dataStream, structDefinition, struct) {
   for (var n in structDefinition) {
     var t = structDefinition[n];
-    DataStream.writeType(dataView, idx, t, struct[n]);
+    DataStream.writeType(dataStream, t, struct[n]);
   }
   return;
 };
 
-DataStream.writeType = function(dataView, idx, t, v) {
+DataStream.writeType = function(dataStream, t, v) {
   switch(t) {
 
     case 'uint8':
-      dataView.setUint8(idx[0], v);
-      idx[0]++;
+      dataStream.writeUint8(v);
       return;
     case 'int8':
-      dataView.setInt8(idx[0], v);
-      idx[0]++;
+      dataStream.writeInt8(v);
       return;
+
     case 'uint16':
-      dataView.setUint16(idx[0], v);
-      idx[0]+=2;
+      dataStream.writeUint16(v, DataStream.BIG_ENDIAN);
       return;
     case 'int16':
-      dataView.setInt16(idx[0], v);
-      idx[0]+=2;
+      dataStream.writeInt16(v, DataStream.BIG_ENDIAN);
       return;
     case 'uint32':
-      dataView.setUint32(idx[0], v);
-      idx[0]+=4;
+      dataStream.writeUint32(v, DataStream.BIG_ENDIAN);
       return;
     case 'int32':
-      dataView.setInt32(idx[0], v);
-      idx[0]+=4;
+      dataStream.writeInt32(v, DataStream.BIG_ENDIAN);
       return;
     case 'float32':
-      dataView.setFloat32(idx[0], v);
-      idx[0]+=4;
+      dataStream.writeFloat32(v, DataStream.BIG_ENDIAN);
       return;
     case 'float64':
-      dataView.setFloat64(idx[0], v);
-      idx[0]+=8;
+      dataStream.writeFloat64(v, DataStream.BIG_ENDIAN);
       return;
 
     case 'uint16le':
-      dataView.setUint16(idx[0], v, true);
-      idx[0]+=2;
+      dataStream.writeUint16(v, DataStream.LITTLE_ENDIAN);
       return;
     case 'int16le':
-      dataView.setInt16(idx[0], v, true);
-      idx[0]+=2;
+      dataStream.writeInt16(v, DataStream.LITTLE_ENDIAN);
       return;
     case 'uint32le':
-      dataView.setUint32(idx[0], v, true);
-      idx[0]+=4;
+      dataStream.writeUint32(v, DataStream.LITTLE_ENDIAN);
       return;
     case 'int32le':
-      dataView.setInt32(idx[0], v, true);
-      idx[0]+=4;
+      dataStream.writeInt32(v, DataStream.LITTLE_ENDIAN);
       return;
     case 'float32le':
-      dataView.setFloat32(idx[0], v, true);
-      idx[0]+=4;
+      dataStream.writeFloat32(v, DataStream.LITTLE_ENDIAN);
       return;
     case 'float64le':
-      dataView.setFloat64(idx[0], v, true);
-      idx[0]+=8;
+      dataStream.writeFloat64(v, DataStream.LITTLE_ENDIAN);
       return;
 
     case 'cstring':
       for (var i=0; i<v.length; i++) {
-        dataView.setUint8(idx[0]++, v.charCodeAt(i));
+        dataStream.writeUint8(v.charCodeAt(i));
       }
-      dataView.setUint8(idx[0]++, 0);
+      dataStream.writeUint8(0);
       return;
 
     default:
       if (t instanceof Array) {
         var ta = t[0];
         for (var i=0; i<v.length; i++) {
-          DataStream.writeType(dataView, idx, ta, v[i]);
+          DataStream.writeType(dataStream, ta, v[i]);
         }
         return;
       } else {
-        DataStream.writeStruct(dataView, idx, t, v);
+        DataStream.writeStruct(dataStream, t, v);
         return;
       }
   }
