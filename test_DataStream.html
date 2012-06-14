@@ -113,6 +113,7 @@
     assertEqual(ds.buffer.byteLength , ds.byteLength);
     ds.seek(0);
     var rarr = ds["map"+t+"Array"](arr.length);
+    ds.seek(0);
     for (i=0; i<ds.byteLength/elen; i++) {
       assertEqual(rarr[i], arr[i]);
       rarr[i] = 127;
@@ -125,6 +126,7 @@
     ds.endianness = DataStream.BIG_ENDIAN;
     ds.seek(0);
     var rarr = ds["map"+t+"Array"](arr.length);
+    ds.seek(0);
     for (i=0; i<ds.byteLength/elen; i++) {
       assertNotEqual(rarr[i], arr[i]);
       rarr[i] = 127;
@@ -138,6 +140,7 @@
     }
     ds.seek(0);
     ds["map"+t+"Array"](arr.length);
+    ds.seek(0);
     var warr = ds["read"+t+"Array"](arr.length);
     for (i=0; i<ds.byteLength/elen; i++) {
       assertEqual(warr[i], 127);
@@ -471,6 +474,18 @@
   testType(ds, 'Float64', 8);
 
   testStruct();
+
+  var s = "Hello, 世界";
+  var dss = new DataStream();
+  dss.writeUTF16String(s);
+  dss.seek(0);
+  assertEqual(s, dss.readUTF16String(s.length));
+
+  var s = "Exif\000\000";
+  var dss = new DataStream();
+  dss.writeString(s);
+  dss.seek(0);
+  assertEqual(s, dss.readString(s.length));
 
   var dss = new DataStream();
   var s = "Hello, World!";

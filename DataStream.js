@@ -151,8 +151,7 @@ DataStream.prototype._trimAlloc = function() {
   Clamps between 0 and DataStream length.
   */
 DataStream.prototype.seek = function(pos) {
-  var npos = Math.max(0, Math.min(
-    this._buffer.byteLength - this._byteOffset, pos));
+  var npos = Math.max(0, Math.min(this.byteLength, pos));
   this.position = (isNaN(npos) || !isFinite(npos)) ? 0 : npos;
 };
 
@@ -169,6 +168,7 @@ DataStream.prototype.mapInt32Array = function(length, e) {
   this._realloc(length * 4);
   var arr = new Int32Array(this.buffer, this.byteOffset+this.position, length);
   DataStream.arrayToNative(arr, e == null ? this.endianness : e);
+  this.position += length * 4;
   return arr;
 };
 
@@ -176,12 +176,14 @@ DataStream.prototype.mapInt16Array = function(length, e) {
   this._realloc(length * 2);
   var arr = new Int16Array(this.buffer, this.byteOffset+this.position, length);
   DataStream.arrayToNative(arr, e == null ? this.endianness : e);
+  this.position += length * 2;
   return arr;
 };
 
 DataStream.prototype.mapInt8Array = function(length) {
   this._realloc(length * 1);
   var arr = new Int8Array(this.buffer, this.byteOffset+this.position, length);
+  this.position += length * 1;
   return arr;
 };
 
@@ -189,6 +191,7 @@ DataStream.prototype.mapUint32Array = function(length, e) {
   this._realloc(length * 4);
   var arr = new Uint32Array(this.buffer, this.byteOffset+this.position, length);
   DataStream.arrayToNative(arr, e == null ? this.endianness : e);
+  this.position += length * 4;
   return arr;
 };
 
@@ -196,12 +199,14 @@ DataStream.prototype.mapUint16Array = function(length, e) {
   this._realloc(length * 2);
   var arr = new Uint16Array(this.buffer, this.byteOffset+this.position, length);
   DataStream.arrayToNative(arr, e == null ? this.endianness : e);
+  this.position += length * 2;
   return arr;
 };
 
 DataStream.prototype.mapUint8Array = function(length) {
   this._realloc(length * 1);
   var arr = new Uint8Array(this.buffer, this.byteOffset+this.position, length);
+  this.position += length * 1;
   return arr;
 };
 
@@ -209,6 +214,7 @@ DataStream.prototype.mapFloat64Array = function(length, e) {
   this._realloc(length * 8);
   var arr = new Float64Array(this.buffer, this.byteOffset+this.position, length);
   DataStream.arrayToNative(arr, e == null ? this.endianness : e);
+  this.position += length * 8;
   return arr;
 };
 
@@ -216,6 +222,7 @@ DataStream.prototype.mapFloat32Array = function(length, e) {
   this._realloc(length * 4);
   var arr = new Float32Array(this.buffer, this.byteOffset+this.position, length);
   DataStream.arrayToNative(arr, e == null ? this.endianness : e);
+  this.position += length * 4;
   return arr;
 };
 
@@ -482,34 +489,64 @@ DataStream.prototype.readStruct = function(structDefinition) {
   return struct;
 };
 
-DataStream.prototype.readCString = function(length) {
-  var blen = this.byteLength;
-  if (length != null) {
-    var s = '';
-    var i = 0;
-    for (i=0; i<length && this.position < blen; i++) {
-      c = this.readUint8();
-      if (c == 0) {
-        break;
-      }
-      s += String.fromCharCode(c);
-    }
-    for (; i<length && this.position < blen; i++) {
-      this.readUint8();
-    }
-    return s;
-  } else {
-    var s = '';
-    var c = 0;
-    while (this.position < blen) {
-      c = this.readUint8();
-      if (c == 0) {
-        break;
-      }
-      s += String.fromCharCode(c);
-    }
-    return s;
+DataStream.prototype.readUTF16String = function(length, endianness) {
+  return String.fromCharCode.apply(null, this.readUint16Array(length, endianness));
+};
+
+DataStream.prototype.writeUTF16String = function(str, endianness, lengthOverride) {
+  if (lengthOverride == null) {
+    lengthOverride = str.length;
   }
+  for (var i = 0; i < str.length && i < lengthOverride; i++) {
+    this.writeUint16(str.charCodeAt(i), endianness);
+  }
+  for (; i<lengthOverride; i++) {
+    this.writeUint16(0);
+  }
+};
+
+DataStream.prototype.readString = function(length, encoding) {
+  if (encoding == null || encoding == "ASCII") {
+    return String.fromCharCode.apply(null, this.mapUint8Array(length));
+  }
+};
+
+DataStream.prototype.writeString = function(s, encoding, length) {
+  if (encoding == null || encoding == "ASCII") {
+    if (length != null) {
+      var i = 0;
+      var len = Math.min(s.length, length);
+      for (i=0; i<len; i++) {
+        this.writeUint8(s.charCodeAt(i));
+      }
+      for (; i<length; i++) {
+        this.writeUint8(0);
+      }
+    } else {
+      for (var i=0; i<s.length; i++) {
+        this.writeUint8(s.charCodeAt(i));
+      }
+      this.writeUint8(0);
+    }
+  }
+};
+
+
+DataStream.prototype.readCString = function(length) {
+  var blen = this.byteLength-this.position;
+  var u8 = new Uint8Array(this._buffer, this._byteOffset + this.position);
+  var len = blen;
+  if (length != null) {
+    len = Math.min(length, blen);
+  }
+  for (var i = 0; i < len && u8[i] != 0; i++); // find first zero byte
+  var s = String.fromCharCode.apply(null, this.mapUint8Array(i));
+  if (length != null) {
+    this.position += len-i;
+  } else if (i != blen) {
+    this.position += 1; // trailing zero if not at end of buffer
+  }
+  return s;
 };
 
 DataStream.prototype.writeCString = function(s, length) {
@@ -592,6 +629,18 @@ DataStream.prototype.readType = function(t, struct) {
 
     case 'cstring':
       v = this.readCString(lengthOverride); break;
+
+    case 'string':
+      v = this.readString(lengthOverride); break;
+
+    case 'u16string':
+      v = this.readUTF16String(lengthOverride, this.endianness); break;
+
+    case 'u16stringle':
+      v = this.readUTF16String(lengthOverride, DataStream.LITTLE_ENDIAN); break;
+
+    case 'u16stringbe':
+      v = this.readUTF16String(lengthOverride, DataStream.BIG_ENDIAN); break;
 
     default:
       if (t.length == 3) {
@@ -743,6 +792,22 @@ DataStream.prototype.writeType = function(t, v, struct) {
 
     case 'cstring':
       this.writeCString(v, lengthOverride);
+      break;
+
+    case 'string':
+      this.writeString(v, null, lengthOverride);
+      break;
+
+    case 'u16string':
+      this.writeUTF16String(v, this.endianness, lengthOverride);
+      break;
+
+    case 'u16stringle':
+      this.writeUTF16String(v, DataStream.LITTLE_ENDIAN, lengthOverride);
+      break;
+
+    case 'u16stringbe':
+      this.writeUTF16String(v, DataStream.BIG_ENDIAN, lengthOverride);
       break;
 
     default:
