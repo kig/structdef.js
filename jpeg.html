@@ -1,6 +1,7 @@
 <html>
   <head>
     <script src="structdef.js"></script>
+    <script src="DataStream.js"></script>
   </head>
   <body>
     <h1>JPEG marker reader</h1>
@@ -37,6 +38,35 @@ document.querySelector('input[type="file"]').onchange = function(e) {
   };
 
   reader.onload = function(e) {
+    var ds = new DataStream(this.result);
+    ds.readStruct([
+      'start', function(ds){ var t = ds.readUint16(); return t == 0xFFD8 ? t : null; },
+      'markers', ['[]', [
+        'tag', 'uint16be',
+        'length', 'uint16be',
+        'data', {
+          get: function(ds, s) {
+            if (s.tag == 0xFFE1) { // EXIF
+              var exif = ds.readString(6);
+              if (exif != 'Exif\000\000') {
+                return null;
+              }
+              // parse rest of Exif
+              return { exif: exif, data: ds.readUint8Array(s.length - 8) };
+            } else if (s.tag == 0xFFDA) {
+              return null;
+            } else {
+              return ds.readUint8Array(s.length - 2);
+            }
+          }
+        }
+      ], '*'],
+      'imageStream', [
+        'tag', function(ds) { var t = ds.readUint16(); return t == 0xFFDA ? t : null; },
+        'data', ['[]', 'uint8', function(s,ds) { return ds.byteLength - ds.position - 2; }]
+      ],
+      'end', function(ds){ var t = ds.readUint16(); return t == 0xFFD9 ? t : null; }
+    ]);
     var dv = new DataView(this.result);
 
     var idx = [0];
