@@ -80,7 +80,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     var rv = {};
     var ds = new DataStream(u8);
     rv.endianness = ds.readString(2);
-    ds.endianness = rv.endianness ? DataStream.BIG_ENDIAN : DataStream.LITTLE_ENDIAN;
+    ds.endianness = rv.endianness == 'MM' ? DataStream.BIG_ENDIAN : DataStream.LITTLE_ENDIAN;
     rv.magic = ds.readUint16();
     if (rv.magic != 42) return null;
     rv.firstOff = ds.readUint32();
