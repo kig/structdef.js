@@ -37,9 +37,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     end: 'uint16=0xFFD9'
   };
 
-  reader.onload = function(e) {
-    var ds = new DataStream(this.result);
-    ds.readStruct([
+    jpegStruct = [
       'start', function(ds){ var t = ds.readUint16(); return t == 0xFFD8 ? t : null; },
       'markers', ['[]', [
         'tag', 'uint16be',
@@ -48,38 +46,41 @@ document.querySelector('input[type="file"]').onchange = function(e) {
           get: function(ds, s) {
             if (s.tag == 0xFFE1) { // EXIF
               var exif = ds.readString(6);
-              if (exif != 'Exif\000\000') {
-                return null;
+              if (exif == 'Exif\000\000') {
+                // parse rest of Exif
+                return { exif: exif, data: ds.readUint8Array(s.length - 8).length };
+              } else {
+                ds.position -= 6;
+                return ds.readUint8Array(s.length - 2).length;
               }
-              // parse rest of Exif
-              return { exif: exif, data: ds.readUint8Array(s.length - 8) };
             } else if (s.tag == 0xFFDA) {
               return null;
             } else {
-              return ds.readUint8Array(s.length - 2);
+              return ds.readUint8Array(s.length - 2).length;
             }
           }
         }
       ], '*'],
       'imageStream', [
         'tag', function(ds) { var t = ds.readUint16(); return t == 0xFFDA ? t : null; },
-        'data', ['[]', 'uint8', function(s,ds) { return ds.byteLength - ds.position - 2; }]
+        'data', function(ds) { return ds.readUint8Array(ds.byteLength - ds.position - 2).length; }
       ],
       'end', function(ds){ var t = ds.readUint16(); return t == 0xFFD9 ? t : null; }
-    ]);
-    var dv = new DataView(this.result);
+    ];
 
-    var idx = [0];
+  reader.onload = function(e) {
+    var ds = new DataStream(this.result);
+    ds.endianness = DataStream.BIG_ENDIAN;
+    var obj = ds.readStruct(jpegStruct);
+//    var dv = new DataView(this.result);
+
+//    var idx = [0];
     pre = document.querySelector('pre');
-    var obj = readStruct(dv, idx, jpegDef);
+//    var obj = readStruct(dv, idx, jpegDef);
     if (obj) { 
-      for (var i=0; i<obj.markers.length; i++) {
-        obj.markers[i].data = "uint8["+obj.markers[i].data.length+"]";
-      }
-      obj.image.data = "uint8["+obj.image.data.length+"]";
       pre.textContent = JSON.stringify(obj, null, 4);
     } else {
-      pre.textContent = "Failed to parse JPEG at "+idx[0]+" :(";
+      pre.textContent = "Failed to parse JPEG at "+ds.failurePosition+" :(";
     }
   };
 

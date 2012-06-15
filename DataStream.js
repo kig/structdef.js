@@ -478,12 +478,21 @@ DataStream.flipArrayEndianness = function(array) {
   return array;
 };
 
+DataStream.prototype.failurePosition = 0;
 
 DataStream.prototype.readStruct = function(structDefinition) {
   var struct = {}, t, v, n;
+  var p = this.position;
   for (var i=0; i<structDefinition.length; i+=2) {
     t = structDefinition[i+1];
     v = this.readType(t, struct);
+    if (v == null) {
+      if (this.failurePosition == 0) {
+        this.failurePosition = this.position;
+      }
+      this.position = p;
+      return null;
+    }
     struct[structDefinition[i]] = v;
   }
   return struct;
@@ -572,11 +581,13 @@ DataStream.prototype.readType = function(t, struct) {
     return t(this, struct);
   } else if (typeof t == "object" && !(t instanceof Array)) {
     return t.get(this, struct);
+  } else if (t instanceof Array && t.length != 3) {
+    return this.readStruct(t, struct);
   }
   var v = null;
   var lengthOverride = null;
   var pos = this.position;
-  if (/:/.test(t)) {
+  if (typeof t == 'string' && /:/.test(t)) {
     var tp = t.split(":");
     t = tp[0];
     lengthOverride = parseInt(tp[1]);
@@ -648,7 +659,7 @@ DataStream.prototype.readType = function(t, struct) {
         var len = t[2];
         var length = 0;
         if (typeof len == 'function') {
-          length = len(struct, t);
+          length = len(struct, this, t);
         } else if (typeof len == 'string' && struct[len] != null) {
           length = parseInt(struct[len]);
         } else {
@@ -680,6 +691,8 @@ DataStream.prototype.readType = function(t, struct) {
             case 'float64':
               v = this.readFloat64Array(length, endianness); break;
             case 'cstring':
+            case 'utf16string':
+            case 'string':
               v = new Array(length);
               for (var i=0; i<length; i++) {
                 v[i] = this.readType(ta, struct);
@@ -687,14 +700,32 @@ DataStream.prototype.readType = function(t, struct) {
               break;
           }
         } else {
-          v = new Array(length);
-          for (var i=0; i<length; i++) {
-            v[i] = this.readType(ta, struct);
+          if (len == '*') {
+            v = [];
+            this.buffer;
+            while (true) {
+              var p = this.position;
+              try {
+                var o = this.readType(ta, struct);
+                if (o == null) {
+                  this.position = p;
+                  break;
+                }
+                v.push(o);
+              } catch(e) {
+                this.position = p;
+                break;
+              }
+            }
+          } else {
+            v = new Array(length);
+            for (var i=0; i<length; i++) {
+              var u = this.readType(ta, struct);
+              if (u == null) return null;
+              v[i] = u;
+            }
           }
         }
-        break;
-      } else {
-        v = this.readStruct(t);
         break;
       }
   }
@@ -719,7 +750,7 @@ DataStream.prototype.writeType = function(t, v, struct) {
   }
   var lengthOverride = null;
   var pos = this.position;
-  if (/:/.test(t)) {
+  if (typeof(t) == 'string' && /:/.test(t)) {
     var tp = t.split(":");
     t = tp[0];
     lengthOverride = parseInt(tp[1]);
