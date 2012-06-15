@@ -106,7 +106,7 @@ Object.defineProperty(DataStream.prototype, 'dataView',
       this._buffer = v.buffer;
       this._byteOffset = v.byteOffset;
       this._dataView = new DataView(this._buffer, this._byteOffset);
-      this._byteLength = this._buffer.byteLength;
+      this._byteLength = this._byteOffset + v.byteLength;
     } });
 
 DataStream.prototype._realloc = function(extra) {
