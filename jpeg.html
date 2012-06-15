@@ -107,7 +107,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
   var jpegStruct = [
       'start', function(ds){ var t = ds.readUint16(); return t == 0xFFD8 ? t : null; },
       'markers', ['[]', [
-        'tag', 'uint16be',
+        'tag', function(ds){ var t = ds.readUint16(); return t == 0xFFD9 ? null : t; },
         'length', 'uint16be',
         'data', {
           get: function(ds, s) {
@@ -121,17 +121,29 @@ document.querySelector('input[type="file"]').onchange = function(e) {
                 return ds.mapUint8Array(s.length - 2).length;
               }
             } else if (s.tag == 0xFFDA) {
-              return null;
+              // image stream
+              var p = ds.position;
+              var cmpCount = ds.readUint8();
+              var cs = [];
+              for (var i=0; i<cmpCount; i++) {
+                cs.push({id: ds.readUint8(), huffmanTable: ds.readUint8()});
+              }
+              ds.position = p + s.length;
+              p = ds.position;
+              var u8 = ds.mapUint8Array(ds.byteLength-ds.position);
+              for (var i=1; i<u8.length; i++) {
+                if (u8[i-1] == 0xFF && u8[i] == 0xD9) {
+                  break;
+                }
+              }
+              ds.position = p;
+              return {components: cs, imageData: ds.mapUint8Array(i-1).length};
             } else {
               return ds.mapUint8Array(s.length - 2).length;
             }
           }
         }
       ], '*'],
-      'imageStream', [
-        'tag', function(ds) { var t = ds.readUint16(); return t == 0xFFDA ? t : null; },
-        'data', function(ds) { return ds.mapUint8Array(ds.byteLength - ds.position - 2).length; }
-      ],
       'end', function(ds){ var t = ds.readUint16(); return t == 0xFFD9 ? t : null; }
   ];
 
