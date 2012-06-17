@@ -194,17 +194,33 @@ document.querySelector('input[type="file"]').onchange = function(e) {
         'length', 'uint16be',
         'data', {
           get: function(ds, s) {
-            if (s.tag == 0xFFE1) { // EXIF
+            switch (s.tag) {
+            case 0xFFE1: // EXIF
               var exif = ds.readString(6);
               if (exif == 'Exif\000\000') {
                 // parse rest of Exif
                 return { exif: exif, data: parseTIFF(ds.mapUint8Array(s.length - 8)) };
               } else {
-                ds.position -= 6;
+                ds.position -= exif.length;
+                var xmp = ds.readCString();
+                if (xmp == "http://ns.adobe.com/xap/1.0/") {
+                  return { xmp: xmp, data: ds.readString(s.length-2-xmp.length-1) };
+                } else {
+                  ds.position -= xmp.length+1;
+                  return ds.mapUint8Array(s.length - 2).length;
+                }
+              }
+              break;
+            case 0xFFE0: // APP0
+              if (s.length >= 7) {
+                return {header: ds.readString(5), data: ds.mapUint8Array(s.length-7).length};
+              } else {
                 return ds.mapUint8Array(s.length - 2).length;
               }
-            } else if (s.tag == 0xFFDA) {
-              // image stream
+              break;
+            case 0xFFE2: // APP2, ICC Profile most likely
+              return ds.readString(s.length-2);
+            case 0xFFDA: // image stream
               var p = ds.position;
               var cmpCount = ds.readUint8();
               var cs = [];
@@ -221,8 +237,10 @@ document.querySelector('input[type="file"]').onchange = function(e) {
               }
               ds.position = p;
               return {components: cs, imageData: ds.mapUint8Array(i-1).length};
-            } else {
+              break;
+            default:
               return ds.mapUint8Array(s.length - 2).length;
+              break;
             }
           }
         }
