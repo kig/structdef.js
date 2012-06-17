@@ -220,6 +220,8 @@ document.querySelector('input[type="file"]').onchange = function(e) {
               break;
             case 0xFFE2: // APP2, ICC Profile most likely
               return ds.readString(s.length-2);
+            case 0xFFED: // APP13, IPTC / Photoshop IRB
+              return ds.readString(s.length-2);
             case 0xFFDA: // image stream
               var p = ds.position;
               var cmpCount = ds.readUint8();
