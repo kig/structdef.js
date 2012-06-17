@@ -104,10 +104,93 @@ document.querySelector('input[type="file"]').onchange = function(e) {
     return rv;
   };
 
+  var jpegMarkers = {
+    // Huffman coding SOFs
+    0xFFC0: "SOF0", // baseline DCT
+    0xFFC1: "SOF1", // extended sequential DCT
+    0xFFC2: "SOF2", // progressive DCT
+    0xFFC3: "SOF3", // lossless (sequential)
+
+    0xFFC5: "SOF5", // differential sequential DCT
+    0xFFC6: "SOF6", // differential progressive DCT
+    0xFFC7: "SOF7", // differential lossless (sequential)
+
+    // Arithmetic coding SOFs
+    0xFFC8: "JPG", // reserved
+    0xFFC9: "SOF9", // extended sequential DCT
+    0xFFCA: "SOF10", // progressive DCT
+    0xFFCB: "SOF11", // lossless sequential
+
+    0xFFCD: "SOF13", // differential sequential DCT
+    0xFFCE: "SOF14", // differential progressive DCT
+    0xFFCF: "SOF15", // differential lossless DCT
+
+    0xFFC4: "DHT", // Define Huffman table(s)
+    0xFFCC: "DAC", // Define arithmetic coding conditioning(s)
+
+    // Restart interval termination
+    0xFFD0: "RST0",
+    0xFFD1: "RST1",
+    0xFFD2: "RST2",
+    0xFFD3: "RST3",
+    0xFFD4: "RST4",
+    0xFFD5: "RST5",
+    0xFFD6: "RST6",
+    0xFFD7: "RST7",
+
+    // other markers
+    0xFFD8: "SOI", // start of image
+    0xFFD9: "EOI", // end of image
+    0xFFDA: "SOS", // start of scan
+    0xFFDB: "DQT", // define quantization table(s)
+    0xFFDC: "DNL", // define number of lines
+    0xFFDE: "DHP", // define hierarchical progression
+    0xFFDF: "EXP", // expand reference component(s)
+
+    // APP markers
+    0xFFE0: "APP0",
+    0xFFE1: "APP1",
+    0xFFE2: "APP2",
+    0xFFE3: "APP3",
+    0xFFE4: "APP4",
+    0xFFE5: "APP5",
+    0xFFE6: "APP6",
+    0xFFE7: "APP7",
+    0xFFE8: "APP8",
+    0xFFE9: "APP9",
+    0xFFEA: "APP10",
+    0xFFEB: "APP11",
+    0xFFEC: "APP12",
+    0xFFED: "APP13",
+    0xFFEE: "APP14",
+    0xFFEF: "APP15",
+
+    // JPEG extensions
+    0xFFF0: "JPG0",
+    0xFFF1: "JPG1",
+    0xFFF2: "JPG2",
+    0xFFF3: "JPG3",
+    0xFFF4: "JPG4",
+    0xFFF5: "JPG5",
+    0xFFF6: "JPG6",
+    0xFFF7: "JPG7",
+    0xFFF8: "JPG8",
+    0xFFF9: "JPG9",
+    0xFFFA: "JPG10",
+    0xFFFB: "JPG11",
+    0xFFFC: "JPG12",
+    0xFFFD: "JPG13",
+
+    0xFFFE: "COM", // comment
+
+    0xFF01: "TEM*" // For temporary private use in arithmetic coding
+  };
+
   var jpegStruct = [
       'start', function(ds){ var t = ds.readUint16(); return t == 0xFFD8 ? t : null; },
       'markers', ['[]', [
         'tag', function(ds){ var t = ds.readUint16(); return t == 0xFFD9 ? null : t; },
+        'tagName', function(ds, s) { return jpegMarkers[s.tag]; },
         'length', 'uint16be',
         'data', {
           get: function(ds, s) {
