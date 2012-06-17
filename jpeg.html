@@ -70,7 +70,7 @@ document.querySelector('input[type="file"]').onchange = function(e) {
       }
       ds.position = p + 4;
       if (v.length && s.type != 2) {
-        v = '['+v.length+']';
+        v = Array.prototype.join.call(v);
       }
       return v;
     }
@@ -212,8 +212,34 @@ document.querySelector('input[type="file"]').onchange = function(e) {
               }
               break;
             case 0xFFE0: // APP0
-              if (s.length >= 7) {
-                return {header: ds.readString(5), data: ds.mapUint8Array(s.length-7).length};
+              if (s.length >= 7) { // probably a JFIF
+                var p = ds.position;
+                var jfif = ds.readCString(5);
+                if (jfif == 'JFIF' || jfif == 'JFXX') {
+                  var jfifStruct = [
+	            'majorVersion', 'uint8',
+                    'minorVersion', 'uint8',
+                    'units', 'uint8',
+                    'xDensity', 'uint16',
+                    'yDensity', 'uint16',
+                    'thumbnail', [
+                      'width', 'uint8',
+                      'height', 'uint8',
+                      'data', ['[]', 'uint8', '*']]];
+                  if (jfif == 'JFXX') {
+	            jfifStruct.unshift('extensionCode', 'uint8');
+                  }
+                  var u8 = ds.mapUint8Array(s.length-7);
+                  var rv = new DataStream(u8, null, DataStream.BIG_ENDIAN).readStruct(jfifStruct);
+                  if (!rv) {
+                    ds.position = p;
+                    return ds.readString(s.length-2);
+                  }
+                  return {jfif: jfif, data: rv};
+                } else {
+                  ds.position -= 5;
+                  return ds.readString(s.length-2);
+                }
               } else {
                 return ds.mapUint8Array(s.length - 2).length;
               }
